@@ -3,14 +3,13 @@ pipeline {
     agent any
     environment {
         HARBOR_CREDS = credentials('jenkins-harbor-creds')
-        K8S_CONFIG = credentials('jenkins-k8s-config')
         GIT_TAG = sh(returnStdout: true,script: 'git describe --tags --always').trim()
     }
     parameters {
-        string(name: 'HARBOR_HOST', defaultValue: '172.23.101.66', description: 'harbor仓库地址')
-        string(name: 'DOCKER_IMAGE', defaultValue: 'tssp/pipeline-demo', description: 'docker镜像名')
+        string(name: 'HARBOR_HOST', defaultValue: '10.28.149.171', description: 'harbor仓库地址')
+        string(name: 'DOCKER_IMAGE', defaultValue: 'ais-iam/pipeline-demo', description: 'docker镜像名')
         string(name: 'APP_NAME', defaultValue: 'pipeline-demo', description: 'k8s中标签名')
-        string(name: 'K8S_NAMESPACE', defaultValue: 'demo', description: 'k8s的namespace名称')
+        string(name: 'K8S_NAMESPACE', defaultValue: 'ais-iam-test', description: 'k8s的namespace名称')
     }
     stages {
         stage('Maven Build') {
@@ -51,12 +50,10 @@ pipeline {
             }
             agent {
                 docker {
-                    image 'lwolf/helm-kubectl-docker'
+                    image 'ais-iam/helm-kubectl-docker'
                 }
             }
             steps {
-                sh "mkdir -p ~/.kube"
-                sh "echo ${K8S_CONFIG} | base64 -d > ~/.kube/config"
                 sh "sed -e 's#{IMAGE_URL}#${params.HARBOR_HOST}/${params.DOCKER_IMAGE}#g;s#{IMAGE_TAG}#${GIT_TAG}#g;s#{APP_NAME}#${params.APP_NAME}#g;s#{SPRING_PROFILE}#k8s-test#g' k8s-deployment.tpl > k8s-deployment.yml"
                 sh "kubectl apply -f k8s-deployment.yml --namespace=${params.K8S_NAMESPACE}"
             }
